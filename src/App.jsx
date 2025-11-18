@@ -1,71 +1,79 @@
+import { useEffect, useState } from 'react'
+import Navbar from './components/Navbar'
+import JobCard from './components/JobCard'
+import JobForm from './components/JobForm'
+import ApplyModal from './components/ApplyModal'
+
 function App() {
+  const [jobs, setJobs] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [showPost, setShowPost] = useState(false)
+  const [applyJob, setApplyJob] = useState(null)
+  const [query, setQuery] = useState({ q: '', location: '', tag: '' })
+
+  const baseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'
+
+  const fetchJobs = async () => {
+    setLoading(true)
+    try {
+      const params = new URLSearchParams()
+      if (query.q) params.append('q', query.q)
+      if (query.location) params.append('location', query.location)
+      if (query.tag) params.append('tag', query.tag)
+      const res = await fetch(`${baseUrl}/jobs?${params.toString()}`)
+      const data = await res.json()
+      setJobs(data.items || [])
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchJobs()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      {/* Subtle pattern overlay */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.05),transparent_50%)]"></div>
+    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
+      <Navbar />
 
-      <div className="relative min-h-screen flex items-center justify-center p-8">
-        <div className="max-w-2xl w-full">
-          {/* Header with Flames icon */}
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center mb-6">
-              <img
-                src="/flame-icon.svg"
-                alt="Flames"
-                className="w-24 h-24 drop-shadow-[0_0_25px_rgba(59,130,246,0.5)]"
-              />
-            </div>
-
-            <h1 className="text-5xl font-bold text-white mb-4 tracking-tight">
-              Flames Blue
-            </h1>
-
-            <p className="text-xl text-blue-200 mb-6">
-              Build applications through conversation
-            </p>
-          </div>
-
-          {/* Instructions */}
-          <div className="bg-slate-800/50 backdrop-blur-sm border border-blue-500/20 rounded-2xl p-8 shadow-xl mb-6">
-            <div className="flex items-start gap-4 mb-6">
-              <div className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-lg flex items-center justify-center font-bold">
-                1
-              </div>
-              <div>
-                <h3 className="font-semibold text-white mb-1">Describe your idea</h3>
-                <p className="text-blue-200/80 text-sm">Use the chat panel on the left to tell the AI what you want to build</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4 mb-6">
-              <div className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-lg flex items-center justify-center font-bold">
-                2
-              </div>
-              <div>
-                <h3 className="font-semibold text-white mb-1">Watch it build</h3>
-                <p className="text-blue-200/80 text-sm">Your app will appear in this preview as the AI generates the code</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-lg flex items-center justify-center font-bold">
-                3
-              </div>
-              <div>
-                <h3 className="font-semibold text-white mb-1">Refine and iterate</h3>
-                <p className="text-blue-200/80 text-sm">Continue the conversation to add features and make changes</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="text-center">
-            <p className="text-sm text-blue-300/60">
-              No coding required • Just describe what you want
-            </p>
-          </div>
+      <main className="max-w-6xl mx-auto px-4 py-10">
+        <div className="text-center mb-10">
+          <h1 className="text-4xl font-bold text-white tracking-tight">Find your next role</h1>
+          <p className="text-slate-300 mt-2">Search live openings and apply in seconds</p>
         </div>
-      </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+          <input value={query.q} onChange={(e) => setQuery({ ...query, q: e.target.value })} placeholder="Search by title, company, keywords" className="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white" />
+          <input value={query.location} onChange={(e) => setQuery({ ...query, location: e.target.value })} placeholder="Location" className="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white" />
+          <input value={query.tag} onChange={(e) => setQuery({ ...query, tag: e.target.value })} placeholder="Tag/Skill" className="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white" />
+        </div>
+
+        <div className="flex items-center justify-between mb-6">
+          <div className="text-slate-300 text-sm">{jobs.length} jobs</div>
+          <button onClick={() => setShowPost(true)} className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium">Post a job</button>
+        </div>
+
+        {loading ? (
+          <div className="text-slate-300">Loading jobs...</div>
+        ) : jobs.length === 0 ? (
+          <div className="text-slate-400">No jobs found. Try adjusting your filters or post the first job.</div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {jobs.map((job) => (
+              <JobCard key={job._id} job={job} onApply={(j) => setApplyJob(j)} />
+            ))}
+          </div>
+        )}
+      </main>
+
+      {showPost && (
+        <JobForm onClose={() => { setShowPost(false); fetchJobs() }} onCreated={() => fetchJobs()} />
+      )}
+
+      {applyJob && <ApplyModal job={applyJob} onClose={() => setApplyJob(null)} />}
     </div>
   )
 }
